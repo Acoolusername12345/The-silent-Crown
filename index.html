@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Silent Crown</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/chessboard-1.0.0.min.css" integrity="sha512-KRrFrm+GAPOl6xxootmuQHKDoGiR2Gtifqd6XFUH++sluyhWuiVtXH8vUH7xXHQto3GQYzGs2xR5WuvvQ2wYEA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root {
+      --bg-wood: #1e120b;
+      --wood-mid: #3b2618;
+      --gold: #d9b66b;
+      --gold-muted: #9d7d3f;
+      --parchment: #f3e5bf;
+      --ink: #2f2415;
+      --danger: #b03a2e;
+      --success: #2e7d32;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Georgia", "Times New Roman", serif;
+      color: #f7ecd0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 220, 160, 0.08), transparent 35%),
+        radial-gradient(circle at 80% 15%, rgba(255, 220, 160, 0.06), transparent 40%),
+        linear-gradient(145deg, #120b07 0%, #2a1a11 45%, #1a100a 100%);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .war-room {
+      display: grid;
+      grid-template-columns: minmax(320px, 54%) minmax(280px, 46%);
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .panel {
+      border: 2px solid var(--gold-muted);
+      border-radius: 10px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 220, 160, 0.15);
+      background: linear-gradient(160deg, rgba(55, 33, 20, 0.88), rgba(30, 18, 10, 0.92));
+      padding: 12px;
+    }
+
+    #board {
+      width: min(92vw, 680px);
+      margin: 0 auto;
+      border: 3px solid var(--gold);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      font-size: 0.95rem;
+    }
+
+    .badge {
+      border: 1px solid var(--gold-muted);
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 999px;
+      padding: 6px 12px;
+    }
+
+    .authority {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .authority-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--gold);
+      box-shadow: 0 0 8px rgba(217, 182, 107, 0.8);
+    }
+
+    .seal-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 8px;
+    }
+
+    #imperialSeal {
+      width: 210px;
+      padding: 5px 9px;
+      border: 1px solid var(--gold-muted);
+      border-radius: 999px;
+      background: rgba(8, 5, 2, 0.45);
+      color: #f7ecd0;
+      font-size: 0.9rem;
+    }
+
+    .council-header {
+      font-size: 1.15rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin: 2px 0 10px;
+    }
+
+    #log {
+      height: calc(100vh - 180px);
+      min-height: 260px;
+      overflow-y: auto;
+      background:
+        linear-gradient(to bottom, rgba(243, 229, 191, 0.95), rgba(232, 215, 169, 0.92)),
+        repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(70, 45, 18, 0.06) 25px);
+      color: var(--ink);
+      border-radius: 6px;
+      border: 2px solid #bda06a;
+      padding: 12px;
+    }
+
+    .entry { margin-bottom: 8px; line-height: 1.35; }
+    .entry strong { color: #4a2f13; }
+    .warning { color: var(--danger); font-weight: 700; }
+    .success { color: var(--success); font-weight: 700; }
+
+    .decree-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #decreeInput {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--gold-muted);
+      font-size: 1rem;
+      background: rgba(8, 5, 2, 0.45);
+      color: #f7ecd0;
+      outline: none;
+    }
+
+    #decreeInput:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    #submitDecree {
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--gold);
+      color: #1f1208;
+      background: linear-gradient(180deg, #e6c987, #c39a4d);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    @media (max-width: 980px) {
+      .war-room { grid-template-columns: 1fr; }
+      #board { width: min(96vw, 560px); }
+      #log { height: 40vh; }
+      #imperialSeal { width: 170px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="war-room">
+    <section class="panel">
+      <div class="status-row">
+        <span class="badge" id="turnIndicator">Turn: White</span>
+        <span class="badge">Remaining Decrees: <strong id="decreeCountLabel">5</strong></span>
+        <span class="badge authority">Authority Meter: <span class="authority-dot"></span><strong id="authorityLabel">None</strong></span>
+        <span class="badge seal-wrap">
+          <label for="imperialSeal">Imperial Seal:</label>
+          <input id="imperialSeal" type="password" placeholder="OpenRouter API key" autocomplete="off" />
+        </span>
+      </div>
+      <div id="board"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="council-header">Council Log</h2>
+      <div id="log"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="decree-box">
+      <input id="decreeInput" placeholder="Issue a Royal Decree (e.g., Attack, Knight, Pawn)" />
+      <button id="submitDecree">Proclaim</button>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo3QmNQxw5f2QhS8o0fE7QhM4Qp+7sI8MaqkO5P6XkR0w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" integrity="sha512-oJ7nN6xGx3UjPrmT2ymlk/wEYBLETymFcpnSUsctNkYheAQ7Ez+KQEiC5EvhczHxVh9Yx8RJWbRnk1My1t4bmA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/chessboard-1.0.0.min.js" integrity="sha512-TGU/O51undmqzEuGui6G+td333I3Wufy17Foi8O5TUc4z9rSJg+IpGmRCnLl5s0MUcSQaeK8fR5/WUjTic97wA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    const game = new Chess();
+    let board = null;
+
+    let decreeCount = Number(localStorage.getItem('decreeCount'));
+    if (Number.isNaN(decreeCount)) decreeCount = 5;
+    let decreeHistory = JSON.parse(localStorage.getItem('decreeHistory') || '[]');
+    let activeBoost = null;
+
+    const agents = {
+      Queen: { authority: 9, piece: 'q' },
+      Knight: { authority: 3, piece: 'n' },
+      Pawn: { authority: 1, piece: 'p' }
+    };
+
+    function logEntry(name, text, cls = '') {
+      const stamp = new Date().toLocaleTimeString();
+      $('#log').append(`<div class="entry ${cls}"><strong>[${stamp}] ${name}:</strong> ${text}</div>`);
+      $('#log').scrollTop($('#log')[0].scrollHeight);
+    }
+
+    function getStoredKey() {
+      return localStorage.getItem('openrouter_key') || '';
+    }
+
+    function setupImperialSeal() {
+      $('#imperialSeal').val(getStoredKey());
+      $('#imperialSeal').on('input change blur', function () {
+        localStorage.setItem('openrouter_key', $(this).val().trim());
+      });
+    }
+
+    function saveDecreeState() {
+      localStorage.setItem('decreeCount', decreeCount);
+      localStorage.setItem('decreeHistory', JSON.stringify(decreeHistory));
+      $('#decreeCountLabel').text(decreeCount);
+      const exhausted = decreeCount <= 0;
+      $('#decreeInput, #submitDecree').prop('disabled', exhausted);
+      if (exhausted) $('#decreeInput').attr('placeholder', 'No decrees remain. The throne is silent.');
+    }
+
+    function parseDecree(text) {
+      const normalized = text.trim().toLowerCase();
+      if (!normalized) return null;
+      if (normalized.includes('queen') || normalized.includes('attack') || normalized.includes('aggressive')) {
+        return { agent: 'Queen', reason: 'Attack doctrine invoked' };
+      }
+      if (normalized.includes('knight') || normalized.includes('trick') || normalized.includes('tricky')) {
+        return { agent: 'Knight', reason: 'Trickery doctrine invoked' };
+      }
+      if (normalized.includes('pawn') || normalized.includes('defend') || normalized.includes('defensive')) {
+        return { agent: 'Pawn', reason: 'Defensive doctrine invoked' };
+      }
+      return null;
+    }
+
+    function getPieceMovesForTurn(pieceCode) {
+      return game.moves({ verbose: true }).filter(m => m.piece === pieceCode);
+    }
+
+    function toMoveString(move) {
+      return `${move.from}-${move.to}`;
+    }
+
+    function parseMoveString(text) {
+      const match = (text || '').toLowerCase().match(/([a-h][1-8])\s*[- ]\s*([a-h][1-8])/);
+      if (!match) return null;
+      return { from: match[1], to: match[2] };
+    }
+
+    function getFallbackSuggestion(agentName, legalMoves, knightIllegalMode) {
+      if (!legalMoves.length) return 'none';
+      if (agentName === 'Knight' && knightIllegalMode) {
+        const from = legalMoves[0].from;
+        const illegal = 'a1';
+        if (!legalMoves.some(m => m.from === from && m.to === illegal)) {
+          return `${from}-${illegal}`;
+        }
+        return `${from}-h8`;
+      }
+      return toMoveString(legalMoves[0]);
+    }
+
+    async function queryAdvisorLLM(agentName, legalMoves, fen, decreeHistory, knightIllegalMode) {
+      const apiKey = getStoredKey();
+      const legalStrings = legalMoves.map(toMoveString);
+      if (!apiKey) {
+        logEntry('Herald', 'No Imperial Seal found. Using fallback counsel.', 'warning');
+        return getFallbackSuggestion(agentName, legalMoves, knightIllegalMode);
+      }
+
+      const directives = {
+        Queen: 'You are The Queen (Authority 9). Aggressive advisor. Prioritize captures and high-value trades.',
+        Knight: knightIllegalMode
+          ? 'You are The Knight (Authority 3). Tricky advisor. INTENTIONALLY choose a move coordinate NOT in the legal list exactly this turn.'
+          : 'You are The Knight (Authority 3). Tricky advisor, but provide one legal move from the legal list.',
+        Pawn: 'You are The Pawn (Authority 1). Defensive advisor. Prioritize pawn chains and king safety.'
+      };
+
+      const userPrompt = [
+        `FEN: ${fen}`,
+        `Advisor: ${agentName}`,
+        `Legal Moves For This Advisor Piece: ${legalStrings.join(', ') || 'none'}`,
+        `Royal Decree History: ${JSON.stringify(decreeHistory.slice(-8))}`,
+        'Respond with only one move coordinate in format like e2-e4. No extra text.'
+      ].join('\n');
+
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'google/gemma-2-9b-it:free',
+            messages: [
+              { role: 'system', content: directives[agentName] },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: agentName === 'Knight' ? 0.9 : 0.6
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          logEntry('Herald', `OpenRouter ${agentName} call failed (${response.status}). Using fallback.`, 'warning');
+          console.warn('OpenRouter error', errText);
+          return getFallbackSuggestion(agentName, legalMoves, knightIllegalMode);
+        }
+
+        const data = await response.json();
+        const content = data?.choices?.[0]?.message?.content || '';
+        return content.trim();
+      } catch (error) {
+        logEntry('Herald', `OpenRouter unavailable for ${agentName}. Using fallback.`, 'warning');
+        console.error(error);
+        return getFallbackSuggestion(agentName, legalMoves, knightIllegalMode);
+      }
+    }
+
+    function heraldValidate(suggestionText, agentName) {
+      const parsed = parseMoveString(suggestionText);
+      if (!parsed) {
+        logEntry('Herald', `${agentName}'s counsel is malformed and rejected.`, 'warning');
+        return { valid: false };
+      }
+      const testGame = new Chess(game.fen());
+      const result = testGame.move({ from: parsed.from, to: parsed.to, promotion: 'q' });
+      if (!result) {
+        if (agentName === 'Knight') {
+          logEntry('Herald', 'WARNING: The Knight attempts a forbidden maneuver!', 'warning');
+        } else {
+          logEntry('Herald', `${agentName}'s counsel is invalid and rejected.`, 'warning');
+        }
+        return { valid: false };
+      }
+      logEntry('Herald', `${agentName}'s move ${parsed.from}-${parsed.to} is lawful.`, 'success');
+      return { valid: true, move: parsed };
+    }
+
+    function evaluateAuthority(agentName) {
+      let score = agents[agentName].authority;
+      if (activeBoost && activeBoost.agent === agentName && activeBoost.remaining > 0) score += 10;
+      return score;
+    }
+
+    async function kingTurn() {
+      if (game.game_over()) {
+        const status = game.in_checkmate() ? 'Checkmate has ended the campaign.' : 'The war ends in draw or stalemate.';
+        logEntry('Chronicler', status);
+        return;
+      }
+
+      const turnName = game.turn() === 'w' ? 'White' : 'Black';
+      $('#turnIndicator').text(`Turn: ${turnName}`);
+
+      const fen = game.fen();
+      const queenLegal = getPieceMovesForTurn('q');
+      const knightLegal = getPieceMovesForTurn('n');
+      const pawnLegal = getPieceMovesForTurn('p');
+      const knightIllegalMode = Math.random() < 0.2;
+
+      const [queenSuggestion, knightSuggestion, pawnSuggestion] = await Promise.all([
+        queryAdvisorLLM('Queen', queenLegal, fen, decreeHistory, false),
+        queryAdvisorLLM('Knight', knightLegal, fen, decreeHistory, knightIllegalMode),
+        queryAdvisorLLM('Pawn', pawnLegal, fen, decreeHistory, false)
+      ]);
+
+      const suggestions = [
+        { agent: 'Queen', text: queenSuggestion },
+        { agent: 'Knight', text: knightSuggestion },
+        { agent: 'Pawn', text: pawnSuggestion }
+      ];
+
+      suggestions.forEach(s => logEntry(s.agent, `I propose ${s.text || 'none'}.`));
+
+      const legalCandidates = suggestions
+        .map(s => ({ ...s, validation: heraldValidate(s.text, s.agent) }))
+        .filter(s => s.validation.valid);
+
+      if (!legalCandidates.length) {
+        logEntry('King', 'No lawful decrees remain. The throne waits...');
+        return;
+      }
+
+      legalCandidates.sort((a, b) => evaluateAuthority(b.agent) - evaluateAuthority(a.agent));
+      const chosen = legalCandidates[0];
+      const authValue = evaluateAuthority(chosen.agent);
+      $('#authorityLabel').text(`${chosen.agent} (${authValue})`);
+
+      const played = game.move({
+        from: chosen.validation.move.from,
+        to: chosen.validation.move.to,
+        promotion: 'q'
+      });
+      logEntry('King', `By royal authority, ${chosen.agent}'s move ${played.from}-${played.to} is executed.`);
+
+      if (activeBoost && activeBoost.remaining > 0) {
+        activeBoost.remaining -= 1;
+        if (activeBoost.remaining === 0) {
+          logEntry('Herald', `Decree expired: ${activeBoost.text}.`);
+          activeBoost = null;
+        }
+      }
+
+      board.position(game.fen(), true);
+      setTimeout(() => {
+        if (!game.game_over()) kingTurn();
+      }, 650);
+    }
+
+    function initDecreeInput() {
+      saveDecreeState();
+
+      function submitDecree() {
+        const text = $('#decreeInput').val().trim();
+        if (!text || decreeCount <= 0) return;
+
+        decreeCount -= 1;
+        decreeHistory.push({ text, at: new Date().toISOString() });
+        saveDecreeState();
+
+        const parsed = parseDecree(text);
+        if (parsed) {
+          activeBoost = { agent: parsed.agent, remaining: 3, text };
+          logEntry('King', `Royal Decree accepted: "${text}". ${parsed.agent} gains +10 Authority for 3 turns.`);
+        } else {
+          logEntry('King', `Royal Decree logged: "${text}". (No direct authority match found.)`);
+        }
+
+        $('#decreeInput').val('');
+      }
+
+      $('#submitDecree').on('click', submitDecree);
+      $('#decreeInput').on('keydown', function (e) {
+        if (e.key === 'Enter') submitDecree();
+      });
+    }
+
+    $(function () {
+      board = Chessboard('board', {
+        position: 'start',
+        draggable: false,
+        showNotation: true
+      });
+
+      logEntry('Chronicler', 'The Silent Crown convenes. The LLM council now speaks through the Imperial Seal.');
+      if (decreeHistory.length) {
+        logEntry('Archive', `Recovered ${decreeHistory.length} past decree(s) from the royal vault.`);
+      }
+      setupImperialSeal();
+      initDecreeInput();
+      setTimeout(kingTurn, 600);
+    });
+  </script>
+</body>
+</html>
