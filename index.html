@@ -8,7 +8,6 @@
   <style>
     :root {
       --bg-wood: #1e120b;
-      --wood-mid: #3b2618;
       --gold: #d9b66b;
       --gold-muted: #9d7d3f;
       --parchment: #f3e5bf;
@@ -16,9 +15,7 @@
       --danger: #b03a2e;
       --success: #2e7d32;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -33,14 +30,12 @@
       gap: 12px;
       padding: 14px;
     }
-
     .war-room {
       display: grid;
       grid-template-columns: minmax(320px, 54%) minmax(280px, 46%);
       gap: 14px;
       min-height: 0;
     }
-
     .panel {
       border: 2px solid var(--gold-muted);
       border-radius: 10px;
@@ -48,7 +43,6 @@
       background: linear-gradient(160deg, rgba(55, 33, 20, 0.88), rgba(30, 18, 10, 0.92));
       padding: 12px;
     }
-
     #board {
       width: min(92vw, 680px);
       margin: 0 auto;
@@ -56,7 +50,6 @@
       border-radius: 4px;
       overflow: hidden;
     }
-
     .status-row {
       display: flex;
       justify-content: space-between;
@@ -66,20 +59,17 @@
       flex-wrap: wrap;
       font-size: 0.95rem;
     }
-
     .badge {
       border: 1px solid var(--gold-muted);
       background: rgba(0, 0, 0, 0.25);
       border-radius: 999px;
       padding: 6px 12px;
     }
-
     .authority {
       display: inline-flex;
       align-items: center;
       gap: 8px;
     }
-
     .authority-dot {
       width: 10px;
       height: 10px;
@@ -87,24 +77,6 @@
       background: var(--gold);
       box-shadow: 0 0 8px rgba(217, 182, 107, 0.8);
     }
-
-    .seal-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding-right: 8px;
-    }
-
-    #imperialSeal {
-      width: 210px;
-      padding: 5px 9px;
-      border: 1px solid var(--gold-muted);
-      border-radius: 999px;
-      background: rgba(8, 5, 2, 0.45);
-      color: #f7ecd0;
-      font-size: 0.9rem;
-    }
-
     .council-header {
       font-size: 1.15rem;
       letter-spacing: 0.5px;
@@ -112,7 +84,6 @@
       color: var(--gold);
       margin: 2px 0 10px;
     }
-
     #log {
       height: calc(100vh - 180px);
       min-height: 260px;
@@ -125,19 +96,16 @@
       border: 2px solid #bda06a;
       padding: 12px;
     }
-
     .entry { margin-bottom: 8px; line-height: 1.35; }
     .entry strong { color: #4a2f13; }
     .warning { color: var(--danger); font-weight: 700; }
     .success { color: var(--success); font-weight: 700; }
-
     .decree-box {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       align-items: center;
     }
-
     #decreeInput {
       width: 100%;
       padding: 12px 14px;
@@ -148,9 +116,7 @@
       color: #f7ecd0;
       outline: none;
     }
-
     #decreeInput:disabled { opacity: 0.55; cursor: not-allowed; }
-
     #submitDecree {
       padding: 12px 16px;
       border-radius: 8px;
@@ -160,12 +126,10 @@
       font-weight: 700;
       cursor: pointer;
     }
-
     @media (max-width: 980px) {
       .war-room { grid-template-columns: 1fr; }
       #board { width: min(96vw, 560px); }
       #log { height: 40vh; }
-      #imperialSeal { width: 170px; }
     }
   </style>
 </head>
@@ -176,10 +140,6 @@
         <span class="badge" id="turnIndicator">Turn: White</span>
         <span class="badge">Remaining Decrees: <strong id="decreeCountLabel">5</strong></span>
         <span class="badge authority">Authority Meter: <span class="authority-dot"></span><strong id="authorityLabel">None</strong></span>
-        <span class="badge seal-wrap">
-          <label for="imperialSeal">Imperial Seal:</label>
-          <input id="imperialSeal" type="password" placeholder="OpenRouter API key" autocomplete="off" />
-        </span>
       </div>
       <div id="board"></div>
     </section>
@@ -221,17 +181,6 @@
       $('#log').scrollTop($('#log')[0].scrollHeight);
     }
 
-    function getStoredKey() {
-      return localStorage.getItem('openrouter_key') || '';
-    }
-
-    function setupImperialSeal() {
-      $('#imperialSeal').val(getStoredKey());
-      $('#imperialSeal').on('input change blur', function () {
-        localStorage.setItem('openrouter_key', $(this).val().trim());
-      });
-    }
-
     function saveDecreeState() {
       localStorage.setItem('decreeCount', decreeCount);
       localStorage.setItem('decreeHistory', JSON.stringify(decreeHistory));
@@ -245,13 +194,13 @@
       const normalized = text.trim().toLowerCase();
       if (!normalized) return null;
       if (normalized.includes('queen') || normalized.includes('attack') || normalized.includes('aggressive')) {
-        return { agent: 'Queen', reason: 'Attack doctrine invoked' };
+        return { agent: 'Queen' };
       }
       if (normalized.includes('knight') || normalized.includes('trick') || normalized.includes('tricky')) {
-        return { agent: 'Knight', reason: 'Trickery doctrine invoked' };
+        return { agent: 'Knight' };
       }
       if (normalized.includes('pawn') || normalized.includes('defend') || normalized.includes('defensive')) {
-        return { agent: 'Pawn', reason: 'Defensive doctrine invoked' };
+        return { agent: 'Pawn' };
       }
       return null;
     }
@@ -270,74 +219,41 @@
       return { from: match[1], to: match[2] };
     }
 
-    function getFallbackSuggestion(agentName, legalMoves, knightIllegalMode) {
+    function fallbackSuggestion(agentName, legalMoves, isIllegalAttempt) {
       if (!legalMoves.length) return 'none';
-      if (agentName === 'Knight' && knightIllegalMode) {
+      if (agentName === 'Knight' && isIllegalAttempt) {
         const from = legalMoves[0].from;
-        const illegal = 'a1';
-        if (!legalMoves.some(m => m.from === from && m.to === illegal)) {
-          return `${from}-${illegal}`;
-        }
-        return `${from}-h8`;
+        return `${from}-a1`;
       }
       return toMoveString(legalMoves[0]);
     }
 
-    async function queryAdvisorLLM(agentName, legalMoves, fen, decreeHistory, knightIllegalMode) {
-      const apiKey = getStoredKey();
-      const legalStrings = legalMoves.map(toMoveString);
-      if (!apiKey) {
-        logEntry('Herald', 'No Imperial Seal found. Using fallback counsel.', 'warning');
-        return getFallbackSuggestion(agentName, legalMoves, knightIllegalMode);
-      }
-
-      const directives = {
-        Queen: 'You are The Queen (Authority 9). Aggressive advisor. Prioritize captures and high-value trades.',
-        Knight: knightIllegalMode
-          ? 'You are The Knight (Authority 3). Tricky advisor. INTENTIONALLY choose a move coordinate NOT in the legal list exactly this turn.'
-          : 'You are The Knight (Authority 3). Tricky advisor, but provide one legal move from the legal list.',
-        Pawn: 'You are The Pawn (Authority 1). Defensive advisor. Prioritize pawn chains and king safety.'
-      };
-
-      const userPrompt = [
-        `FEN: ${fen}`,
-        `Advisor: ${agentName}`,
-        `Legal Moves For This Advisor Piece: ${legalStrings.join(', ') || 'none'}`,
-        `Royal Decree History: ${JSON.stringify(decreeHistory.slice(-8))}`,
-        'Respond with only one move coordinate in format like e2-e4. No extra text.'
-      ].join('\n');
-
+    async function queryAdvisorLLM(agentName, legalMoves, fen, history, isIllegalAttempt) {
       try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        const response = await fetch('/ai-counsel', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'google/gemma-2-9b-it:free',
-            messages: [
-              { role: 'system', content: directives[agentName] },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: agentName === 'Knight' ? 0.9 : 0.6
+            fen,
+            legalMoves: legalMoves.map(toMoveString),
+            agentName,
+            history,
+            isIllegalAttempt
           })
         });
 
         if (!response.ok) {
-          const errText = await response.text();
-          logEntry('Herald', `OpenRouter ${agentName} call failed (${response.status}). Using fallback.`, 'warning');
-          console.warn('OpenRouter error', errText);
-          return getFallbackSuggestion(agentName, legalMoves, knightIllegalMode);
+          const err = await response.text();
+          logEntry('Herald', `${agentName} channel disrupted (${response.status}). Using fallback.`, 'warning');
+          console.warn(err);
+          return fallbackSuggestion(agentName, legalMoves, isIllegalAttempt);
         }
 
-        const data = await response.json();
-        const content = data?.choices?.[0]?.message?.content || '';
-        return content.trim();
+        return (await response.text()).trim();
       } catch (error) {
-        logEntry('Herald', `OpenRouter unavailable for ${agentName}. Using fallback.`, 'warning');
+        logEntry('Herald', `${agentName} channel unavailable. Using fallback.`, 'warning');
         console.error(error);
-        return getFallbackSuggestion(agentName, legalMoves, knightIllegalMode);
+        return fallbackSuggestion(agentName, legalMoves, isIllegalAttempt);
       }
     }
 
@@ -347,6 +263,7 @@
         logEntry('Herald', `${agentName}'s counsel is malformed and rejected.`, 'warning');
         return { valid: false };
       }
+
       const testGame = new Chess(game.fen());
       const result = testGame.move({ from: parsed.from, to: parsed.to, promotion: 'q' });
       if (!result) {
@@ -357,6 +274,7 @@
         }
         return { valid: false };
       }
+
       logEntry('Herald', `${agentName}'s move ${parsed.from}-${parsed.to} is lawful.`, 'success');
       return { valid: true, move: parsed };
     }
@@ -374,18 +292,17 @@
         return;
       }
 
-      const turnName = game.turn() === 'w' ? 'White' : 'Black';
-      $('#turnIndicator').text(`Turn: ${turnName}`);
+      $('#turnIndicator').text(`Turn: ${game.turn() === 'w' ? 'White' : 'Black'}`);
 
       const fen = game.fen();
       const queenLegal = getPieceMovesForTurn('q');
       const knightLegal = getPieceMovesForTurn('n');
       const pawnLegal = getPieceMovesForTurn('p');
-      const knightIllegalMode = Math.random() < 0.2;
+      const knightIllegalAttempt = Math.random() < 0.2;
 
       const [queenSuggestion, knightSuggestion, pawnSuggestion] = await Promise.all([
         queryAdvisorLLM('Queen', queenLegal, fen, decreeHistory, false),
-        queryAdvisorLLM('Knight', knightLegal, fen, decreeHistory, knightIllegalMode),
+        queryAdvisorLLM('Knight', knightLegal, fen, decreeHistory, knightIllegalAttempt),
         queryAdvisorLLM('Pawn', pawnLegal, fen, decreeHistory, false)
       ]);
 
@@ -416,6 +333,7 @@
         to: chosen.validation.move.to,
         promotion: 'q'
       });
+
       logEntry('King', `By royal authority, ${chosen.agent}'s move ${played.from}-${played.to} is executed.`);
 
       if (activeBoost && activeBoost.remaining > 0) {
@@ -467,13 +385,12 @@
         showNotation: true
       });
 
-      logEntry('Chronicler', 'The Silent Crown convenes. The LLM council now speaks through the Imperial Seal.');
+      logEntry('Chronicler', 'The Silent Crown convenes. Advisors now report through the Cloudflare Fortress.');
       if (decreeHistory.length) {
         logEntry('Archive', `Recovered ${decreeHistory.length} past decree(s) from the royal vault.`);
       }
-      setupImperialSeal();
       initDecreeInput();
-      setTimeout(kingTurn, 600);
+      setTimeout(kingTurn, 650);
     });
   </script>
 </body>
