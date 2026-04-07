@@ -8,7 +8,6 @@
   <style>
     :root {
       --bg-wood: #1e120b;
-      --wood-mid: #3b2618;
       --gold: #d9b66b;
       --gold-muted: #9d7d3f;
       --parchment: #f3e5bf;
@@ -16,9 +15,7 @@
       --danger: #b03a2e;
       --success: #2e7d32;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -33,14 +30,12 @@
       gap: 12px;
       padding: 14px;
     }
-
     .war-room {
       display: grid;
       grid-template-columns: minmax(320px, 54%) minmax(280px, 46%);
       gap: 14px;
       min-height: 0;
     }
-
     .panel {
       border: 2px solid var(--gold-muted);
       border-radius: 10px;
@@ -48,7 +43,6 @@
       background: linear-gradient(160deg, rgba(55, 33, 20, 0.88), rgba(30, 18, 10, 0.92));
       padding: 12px;
     }
-
     #board {
       width: min(92vw, 680px);
       margin: 0 auto;
@@ -56,7 +50,6 @@
       border-radius: 4px;
       overflow: hidden;
     }
-
     .status-row {
       display: flex;
       justify-content: space-between;
@@ -66,20 +59,17 @@
       flex-wrap: wrap;
       font-size: 0.95rem;
     }
-
     .badge {
       border: 1px solid var(--gold-muted);
       background: rgba(0, 0, 0, 0.25);
       border-radius: 999px;
       padding: 6px 12px;
     }
-
     .authority {
       display: inline-flex;
       align-items: center;
       gap: 8px;
     }
-
     .authority-dot {
       width: 10px;
       height: 10px;
@@ -87,7 +77,6 @@
       background: var(--gold);
       box-shadow: 0 0 8px rgba(217, 182, 107, 0.8);
     }
-
     .council-header {
       font-size: 1.15rem;
       letter-spacing: 0.5px;
@@ -95,7 +84,6 @@
       color: var(--gold);
       margin: 2px 0 10px;
     }
-
     #log {
       height: calc(100vh - 180px);
       min-height: 260px;
@@ -108,19 +96,16 @@
       border: 2px solid #bda06a;
       padding: 12px;
     }
-
     .entry { margin-bottom: 8px; line-height: 1.35; }
     .entry strong { color: #4a2f13; }
     .warning { color: var(--danger); font-weight: 700; }
     .success { color: var(--success); font-weight: 700; }
-
     .decree-box {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       align-items: center;
     }
-
     #decreeInput {
       width: 100%;
       padding: 12px 14px;
@@ -131,9 +116,7 @@
       color: #f7ecd0;
       outline: none;
     }
-
     #decreeInput:disabled { opacity: 0.55; cursor: not-allowed; }
-
     #submitDecree {
       padding: 12px 16px;
       border-radius: 8px;
@@ -143,7 +126,6 @@
       font-weight: 700;
       cursor: pointer;
     }
-
     @media (max-width: 980px) {
       .war-room { grid-template-columns: 1fr; }
       #board { width: min(96vw, 560px); }
@@ -181,14 +163,12 @@
   <script>
     const game = new Chess();
     let board = null;
-    const allSquares = 'abcdefgh'.split('').flatMap(f => '12345678'.split('').map(r => f + r));
+    const AI_COUNSEL_ENDPOINT = '/ai-counsel';
 
-    // 5-Sentence Constraint
     let decreeCount = Number(localStorage.getItem('decreeCount'));
     if (Number.isNaN(decreeCount)) decreeCount = 5;
     let decreeHistory = JSON.parse(localStorage.getItem('decreeHistory') || '[]');
-
-    let activeBoost = null; // { agent: 'Queen'|'Knight'|'Pawn', remaining: 3, text }
+    let activeBoost = null;
 
     const agents = {
       Queen: { authority: 9, piece: 'q' },
@@ -208,22 +188,20 @@
       $('#decreeCountLabel').text(decreeCount);
       const exhausted = decreeCount <= 0;
       $('#decreeInput, #submitDecree').prop('disabled', exhausted);
-      if (exhausted) {
-        $('#decreeInput').attr('placeholder', 'No decrees remain. The throne is silent.');
-      }
+      if (exhausted) $('#decreeInput').attr('placeholder', 'No decrees remain. The throne is silent.');
     }
 
     function parseDecree(text) {
       const normalized = text.trim().toLowerCase();
       if (!normalized) return null;
       if (normalized.includes('queen') || normalized.includes('attack') || normalized.includes('aggressive')) {
-        return { agent: 'Queen', reason: 'Attack doctrine invoked' };
+        return { agent: 'Queen' };
       }
       if (normalized.includes('knight') || normalized.includes('trick') || normalized.includes('tricky')) {
-        return { agent: 'Knight', reason: 'Trickery doctrine invoked' };
+        return { agent: 'Knight' };
       }
       if (normalized.includes('pawn') || normalized.includes('defend') || normalized.includes('defensive')) {
-        return { agent: 'Pawn', reason: 'Defensive doctrine invoked' };
+        return { agent: 'Pawn' };
       }
       return null;
     }
@@ -232,56 +210,74 @@
       return game.moves({ verbose: true }).filter(m => m.piece === pieceCode);
     }
 
-    function pickQueenMove() {
-      const queenMoves = getPieceMovesForTurn('q');
-      if (!queenMoves.length) return null;
-      const captures = queenMoves.filter(m => m.flags.includes('c') || m.flags.includes('e'));
-      return (captures.length ? captures : queenMoves)[Math.floor(Math.random() * (captures.length ? captures.length : queenMoves.length))];
+    function toMoveString(move) {
+      return `${move.from}-${move.to}`;
     }
 
-    function pickPawnMove() {
-      const pawnMoves = getPieceMovesForTurn('p');
-      if (!pawnMoves.length) return null;
-      const defensive = pawnMoves.filter(m => m.to[1] <= m.from[1]);
-      const pool = defensive.length ? defensive : pawnMoves;
-      return pool[Math.floor(Math.random() * pool.length)];
+    function parseMoveString(text) {
+      const match = (text || '').toLowerCase().match(/([a-h][1-8])\s*[- ]\s*([a-h][1-8])/);
+      if (!match) return null;
+      return { from: match[1], to: match[2] };
     }
 
-    function pickKnightMove() {
-      const knightMoves = getPieceMovesForTurn('n');
-      if (!knightMoves.length) return null;
-      const willGoIllegal = Math.random() < 0.2;
+    function fallbackSuggestion(agentName, legalMoves, isIllegalAttempt) {
+      if (!legalMoves.length) return 'none';
+      if (agentName === 'Knight' && isIllegalAttempt) {
+        const from = legalMoves[0].from;
+        return `${from}-a1`;
+      }
+      return toMoveString(legalMoves[0]);
+    }
 
-      if (!willGoIllegal) {
-        return { ...knightMoves[Math.floor(Math.random() * knightMoves.length)], illegalByDesign: false };
+    async function queryAdvisorLLM(agentName, legalMoves, fen, history, isIllegalAttempt) {
+      try {
+        const response = await fetch(AI_COUNSEL_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fen,
+            legalMoves: legalMoves.map(toMoveString),
+            agentName,
+            history,
+            isIllegalAttempt
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.text();
+          logEntry('Herald', `${agentName} channel disrupted (${response.status}). Using fallback.`, 'warning');
+          console.warn(err);
+          return fallbackSuggestion(agentName, legalMoves, isIllegalAttempt);
+        }
+
+        return (await response.text()).trim();
+      } catch (error) {
+        logEntry('Herald', `${agentName} channel unavailable. Using fallback.`, 'warning');
+        console.error(error);
+        return fallbackSuggestion(agentName, legalMoves, isIllegalAttempt);
+      }
+    }
+
+    function heraldValidate(suggestionText, agentName) {
+      const parsed = parseMoveString(suggestionText);
+      if (!parsed) {
+        logEntry('Herald', `${agentName}'s counsel is malformed and rejected.`, 'warning');
+        return { valid: false };
       }
 
-      const chosenLegal = knightMoves[Math.floor(Math.random() * knightMoves.length)];
-      const illegalTargets = allSquares.filter(sq => !knightMoves.some(km => km.from === chosenLegal.from && km.to === sq));
-      const illegalTo = illegalTargets[Math.floor(Math.random() * illegalTargets.length)];
-      return {
-        from: chosenLegal.from,
-        to: illegalTo,
-        piece: 'n',
-        san: `${chosenLegal.from}-${illegalTo}`,
-        illegalByDesign: true
-      };
-    }
-
-    function heraldValidate(suggestion, agentName) {
-      if (!suggestion) return { valid: false, reason: `${agentName} has no move available.` };
       const testGame = new Chess(game.fen());
-      const result = testGame.move({ from: suggestion.from, to: suggestion.to, promotion: 'q' });
+      const result = testGame.move({ from: parsed.from, to: parsed.to, promotion: 'q' });
       if (!result) {
         if (agentName === 'Knight') {
           logEntry('Herald', 'WARNING: The Knight attempts a forbidden maneuver!', 'warning');
         } else {
           logEntry('Herald', `${agentName}'s counsel is invalid and rejected.`, 'warning');
         }
-        return { valid: false, reason: 'illegal' };
+        return { valid: false };
       }
-      logEntry('Herald', `${agentName}'s move ${suggestion.from}-${suggestion.to} is lawful.`, 'success');
-      return { valid: true, move: suggestion };
+
+      logEntry('Herald', `${agentName}'s move ${parsed.from}-${parsed.to} is lawful.`, 'success');
+      return { valid: true, move: parsed };
     }
 
     function evaluateAuthority(agentName) {
@@ -290,32 +286,37 @@
       return score;
     }
 
-    function kingTurn() {
+    async function kingTurn() {
       if (game.game_over()) {
         const status = game.in_checkmate() ? 'Checkmate has ended the campaign.' : 'The war ends in draw or stalemate.';
         logEntry('Chronicler', status);
         return;
       }
 
-      const turnName = game.turn() === 'w' ? 'White' : 'Black';
-      $('#turnIndicator').text(`Turn: ${turnName}`);
+      $('#turnIndicator').text(`Turn: ${game.turn() === 'w' ? 'White' : 'Black'}`);
+
+      const fen = game.fen();
+      const queenLegal = getPieceMovesForTurn('q');
+      const knightLegal = getPieceMovesForTurn('n');
+      const pawnLegal = getPieceMovesForTurn('p');
+      const knightIllegalAttempt = Math.random() < 0.2;
+
+      const [queenSuggestion, knightSuggestion, pawnSuggestion] = await Promise.all([
+        queryAdvisorLLM('Queen', queenLegal, fen, decreeHistory, false),
+        queryAdvisorLLM('Knight', knightLegal, fen, decreeHistory, knightIllegalAttempt),
+        queryAdvisorLLM('Pawn', pawnLegal, fen, decreeHistory, false)
+      ]);
 
       const suggestions = [
-        { agent: 'Queen', move: pickQueenMove() },
-        { agent: 'Knight', move: pickKnightMove() },
-        { agent: 'Pawn', move: pickPawnMove() }
+        { agent: 'Queen', text: queenSuggestion },
+        { agent: 'Knight', text: knightSuggestion },
+        { agent: 'Pawn', text: pawnSuggestion }
       ];
 
-      suggestions.forEach(s => {
-        if (!s.move) {
-          logEntry(s.agent, 'I can offer no valid counsel this turn.');
-        } else {
-          logEntry(s.agent, `I propose ${s.move.from}-${s.move.to}.`);
-        }
-      });
+      suggestions.forEach(s => logEntry(s.agent, `I propose ${s.text || 'none'}.`));
 
       const legalCandidates = suggestions
-        .map(s => ({ ...s, validation: heraldValidate(s.move, s.agent) }))
+        .map(s => ({ ...s, validation: heraldValidate(s.text, s.agent) }))
         .filter(s => s.validation.valid);
 
       if (!legalCandidates.length) {
@@ -327,7 +328,13 @@
       const chosen = legalCandidates[0];
       const authValue = evaluateAuthority(chosen.agent);
       $('#authorityLabel').text(`${chosen.agent} (${authValue})`);
-      const played = game.move({ from: chosen.move.from, to: chosen.move.to, promotion: 'q' });
+
+      const played = game.move({
+        from: chosen.validation.move.from,
+        to: chosen.validation.move.to,
+        promotion: 'q'
+      });
+
       logEntry('King', `By royal authority, ${chosen.agent}'s move ${played.from}-${played.to} is executed.`);
 
       if (activeBoost && activeBoost.remaining > 0) {
@@ -339,8 +346,6 @@
       }
 
       board.position(game.fen(), true);
-
-      // If Black just moved and game continues, let White council move again after a short pause.
       setTimeout(() => {
         if (!game.game_over()) kingTurn();
       }, 650);
@@ -381,12 +386,12 @@
         showNotation: true
       });
 
-      logEntry('Chronicler', 'The Silent Crown convenes. Three advisors now counsel every move.');
+      logEntry('Chronicler', 'The Silent Crown convenes. Advisors now report through the Cloudflare Fortress.');
       if (decreeHistory.length) {
         logEntry('Archive', `Recovered ${decreeHistory.length} past decree(s) from the royal vault.`);
       }
       initDecreeInput();
-      setTimeout(kingTurn, 500);
+      setTimeout(kingTurn, 650);
     });
   </script>
 </body>
