@@ -163,6 +163,7 @@
   <script>
     const game = new Chess();
     let board = null;
+    const AI_COUNSEL_ENDPOINT = '/ai-counsel';
 
     let decreeCount = Number(localStorage.getItem('decreeCount'));
     if (Number.isNaN(decreeCount)) decreeCount = 5;
@@ -230,7 +231,7 @@
 
     async function queryAdvisorLLM(agentName, legalMoves, fen, history, isIllegalAttempt) {
       try {
-        const response = await fetch('/ai-counsel', {
+        const response = await fetch(AI_COUNSEL_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
